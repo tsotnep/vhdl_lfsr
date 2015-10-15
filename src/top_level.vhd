@@ -1,54 +1,53 @@
+--***************************************************************************************************
+ --*	Author: Tsotne Putkaradze, tsotnep@gmail.com
+ --*	University: Tallinn Technical University
+ --*	Description of Software:
+ --*		VHDL code of Parameterizable Linear Feedback Shift Register
+ --*
+ --* 	copyright: open source
+
 library ieee;
 use ieee.std_logic_1164.all;
-use ieee.numeric_std.all;
-
-entity top_level is
+--LFSR shifts to the left
+--so, if feedback==1101, it means: x^3 + x^2 + 1
+entity top_level_LFSR is
 	generic(
-		--S_eed
-		s0 : std_logic := '1';
-		s1 : std_logic := '0';
-		s2 : std_logic := '1';
-		s3 : std_logic := '0';
-
-		--F_eedback
-		f0 : std_logic := '1';
-		f1 : std_logic := '1';
-		f2 : std_logic := '1';
-		f3 : std_logic := '1'
+		size : integer                             := 8;	--size of Polynomial
+		s    : std_logic_vector(8 - 1 downto 0) := "01101001";	--S_eeds
+		f    : std_logic_vector(8 - 1 downto 0) := "11111011"	--F_eedback
 	);
 	port(
-		output : out std_logic_vector(3 downto 0);
+		output : out std_logic_vector(size - 1 downto 0);
 		clk    : in  std_logic;
 		rst    : in  std_logic
 	);
-end entity top_level;
+end entity top_level_LFSR;
 
-architecture RTL of top_level is
-	signal xor3, xor2, xor1 : STD_LOGIC;
-	signal r0, r1, r2, r3   : STD_LOGIC;
+--! @brief Architecture definition of the LFSR
+architecture RTL of top_level_LFSR is
+	signal xor_values : std_logic_vector(size downto 0) := (others => '0');
+	signal r          : std_logic_vector(size - 1 downto 0); --registers
 begin
-	xor1 <= r1 xor r0 when (f1 = '1' and f0 = '1')
-		else r1 when f1 = '1'
-		else r0 when f0 = '1'
-		else '0';                       --f1=f0=0
-	xor2 <= r2 xor xor1 when f2 = '1' else xor1;
-	xor3 <= r3 xor xor2 when f3 = '1' else xor2;
+	output <= r;
 
-	output <= r3 & r2 & r1 & r0;
+	generate_feedback : for I in 0 to size - 1 generate
+		XOR_ING_inst : entity work.XOR_ING
+			port map(xor_values(I + 1), r(I), f(I), xor_values(I));
+	end generate generate_feedback;
+	
+	-- The logic is following for 4 bit, not that we have 5 bit of xor_values for  that.
+	--	xor_values(1) <= ((r(0) and f(0)) xor xor_values(0)); where xor(0) is always 0. 
+	--	xor_values(2) <= ((r(1) and f(1)) xor xor_values(1)); first part means:
+	--	xor_values(3) <= ((r(2) and f(2)) xor xor_values(2)); if corresponding feedback f is 1
+	--	xor_values(4) <= ((r(3) and f(3)) xor xor_values(3)); then it bypasses corresponding r
 
-	process(clk, rst)
+	shift_reset_p : process(clk, rst)
 	begin
 		if rst = '1' then
-			r0 <= s0;
-			r1 <= s1;
-			r2 <= s2;
-			r3 <= s3;
+			r <= s;
 		elsif rising_edge(clk) then
-			r3 <= xor3;
-			r2 <= r3;
-			r1 <= r2;
-			r0 <= r1;
+			r(size - 1)   <= xor_values(size); --last xor_value in 4 bit LFSR's case, xor_values(4)
+			r(size - 2 downto 0) <= r(size - 1 downto 1);
 		end if;
 	end process;
-
 end architecture RTL;
