@@ -262,7 +262,7 @@ OPTIMIZE_FOR_FORTRAN   = NO
 # sources. Doxygen will then generate output that is tailored for VHDL.
 # The default value is: NO.
 
-OPTIMIZE_OUTPUT_VHDL   = NO
+OPTIMIZE_OUTPUT_VHDL   = YES
 
 # Doxygen selects the parser to use depending on the extension of the files it
 # parses. With this tag you can assign which parser to use for a given
